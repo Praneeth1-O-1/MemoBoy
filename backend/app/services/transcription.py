@@ -1,80 +1,92 @@
-import logging
-import traceback
-import subprocess
+from sarvamai import SarvamAI
 import os
+import json
+import shutil
 from flask import current_app
-from app import db
-from app.models import Note
 
-from faster_whisper import WhisperModel
-
-logger = logging.getLogger('voicenote.transcription')
-
-# Load model once (IMPORTANT: don't load per request)
-model = WhisperModel("base", device="cpu", compute_type="int8")
-
-
-def convert_to_wav(input_path: str) -> str:
-    """Convert audio to wav (16kHz mono) for Whisper."""
-    output_path = input_path.rsplit(".", 1)[0] + ".wav"
-
-    subprocess.run([
-        "ffmpeg", "-y",
-        "-i", input_path,
-        "-ar", "16000",
-        "-ac", "1",
-        output_path
-    ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-
-    return output_path
 
 
 def transcribe_audio(note_id: int) -> str | None:
-    note = db.session.get(Note, note_id)
-    if not note:
-        logger.error(f"Note #{note_id} not found for transcription")
+    from app import db
+    from app.models import Note
+
+    api_key = os.getenv("SARVAM_API_KEY")
+
+    if not api_key:
+        print("❌ SARVAM_API_KEY missing")
         return None
 
-    logger.info(f"Starting transcription for Note #{note_id} — file: {note.audio_path}")
+    client = SarvamAI(api_subscription_key=api_key)
+
+    note = db.session.get(Note, note_id)
+    if not note:
+        return None
 
     try:
-        # Ensure file exists
-        if not os.path.exists(note.audio_path):
-            logger.error(f"Audio file not found: {note.audio_path}")
+        # Create job
+        job = client.speech_to_text_job.create_job(
+            model="saaras:v3",
+            mode="transcribe",
+            language_code="unknown"
+        )
+
+        # Upload file
+        job.upload_files(file_paths=[note.audio_path])
+
+        # Start job
+        job.start()
+
+        # Wait (blocking for now — we'll fix later)
+        job.wait_until_complete()
+
+        # Get results
+        results = job.get_file_results()
+
+        if not results["successful"]:
             note.status = Note.STATUS_FAILED
             db.session.commit()
             return None
 
-        # Convert to wav (Whisper works best with wav)
-        wav_path = convert_to_wav(note.audio_path)
+        # Download output
+        temp_dir = os.path.join(current_app.root_path, "temp_outputs", f"job_{note_id}")
+        os.makedirs(temp_dir, exist_ok=True)
+        job.download_outputs(output_dir=temp_dir)
 
-        # Transcribe
-        segments, info = model.transcribe(wav_path)
+        transcript = ""
 
-        transcript = " ".join([segment.text for segment in segments]).strip()
+        try:
+            for file in os.listdir(temp_dir):
+                file_path = os.path.join(temp_dir, file)
+
+                with open(file_path) as f:
+                    data = json.load(f)
+
+                    if data.get("transcript"):
+                        transcript = data["transcript"]
+                        break
+        finally:
+            # Clean up the temp directory
+            if os.path.exists(temp_dir):
+                shutil.rmtree(temp_dir)
 
         if not transcript:
-            logger.warning(f"Empty transcript for Note #{note_id}")
             note.status = Note.STATUS_FAILED
             db.session.commit()
             return None
 
-        # Save result
+        # Save
         note.transcript = transcript
         note.status = Note.STATUS_TRANSCRIBED
 
         if not note.title:
-            note.title = transcript[:50].strip() + ('...' if len(transcript) > 50 else '')
+            note.title = transcript[:50] + "..."
 
         db.session.commit()
 
-        logger.info(f"Transcription complete for Note #{note_id}: {len(transcript)} chars")
         return transcript
 
     except Exception as e:
-        logger.error(f"Error transcribing Note #{note_id}: {type(e).__name__}: {e}")
-        logger.error(traceback.format_exc())
-
+        print("Sarvam error:", e)
         note.status = Note.STATUS_FAILED
         db.session.commit()
         return None

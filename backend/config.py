@@ -9,6 +9,7 @@ class Config:
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL', 'sqlite:///voicenote.db')
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')
+    SARVAM_API_KEY = os.environ.get('SARVAM_API_KEY', '')
     UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'uploads')
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16 MB max upload
     ALLOWED_AUDIO_EXTENSIONS = {'wav', 'mp3', 'm4a', 'webm', 'ogg', 'flac'}

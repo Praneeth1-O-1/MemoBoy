@@ -36,6 +36,22 @@ export default function Home() {
     loadData();
   }, [loadData]);
 
+  // Poll for updates if any note is processing
+  useEffect(() => {
+    let intervalId;
+    const hasPending = notes.some(note => note.status === 'pending_transcription');
+    
+    if (hasPending) {
+      intervalId = setInterval(() => {
+        loadData();
+      }, 3000); // Poll every 3 seconds
+    }
+    
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [notes, loadData]);
+
   const showToast = (message, type = 'success') => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 4000);

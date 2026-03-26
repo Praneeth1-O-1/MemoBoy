@@ -42,6 +42,19 @@ export default function NoteDetail() {
     loadNote();
   }, [loadNote]);
 
+  // Poll for updates if note is processing
+  useEffect(() => {
+    let intervalId;
+    if (note && note.status === 'pending_transcription') {
+      intervalId = setInterval(() => {
+        loadNote();
+      }, 3000); // Poll every 3 seconds
+    }
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [note?.status, loadNote]);
+
   const showToast = (message, type = 'success') => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 4000);

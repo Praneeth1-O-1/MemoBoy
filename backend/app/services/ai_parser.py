@@ -57,7 +57,8 @@ def _rule_based_parser(transcript: str, current_time: datetime) -> dict:
     # Very basic time detection (can improve later)
     reminder_time = None
     if "tomorrow" in text:
-        reminder_time = (current_time.replace(hour=9, minute=0, second=0, microsecond=0)
+        from datetime import timedelta
+        reminder_time = ((current_time + timedelta(days=1)).replace(hour=9, minute=0, second=0, microsecond=0)
                          .astimezone(timezone.utc)
                          .isoformat())
 

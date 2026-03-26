@@ -3,7 +3,7 @@
  */
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { fetchNote, createReminder, deleteNote, deleteReminder } from '../api/client';
+import { fetchNote, createReminder, deleteNote, deleteReminder, toggleReminderStatus } from '../api/client';
 import ReminderBadge from '../components/ReminderBadge';
 
 const STATUS_LABELS = {
@@ -101,6 +101,15 @@ export default function NoteDetail() {
     }
   };
 
+  const handleToggleReminder = async (reminderId) => {
+    try {
+      await toggleReminderStatus(reminderId);
+      await loadNote();
+    } catch (err) {
+      showToast('Failed to update status', 'error');
+    }
+  };
+
   if (loading) {
     return (
       <div className="loading-spinner">
@@ -112,7 +121,9 @@ export default function NoteDetail() {
   if (!note) {
     return (
       <div className="empty-state">
-        <div className="empty-state-icon">🔍</div>
+        <div className="empty-state-icon">
+           <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        </div>
         <div className="empty-state-title">Note not found</div>
         <button className="back-btn" onClick={() => navigate('/')}>← Back to notes</button>
       </div>
@@ -144,7 +155,7 @@ export default function NoteDetail() {
 
       {/* Audio Player */}
       <div className="detail-section">
-        <h2 className="detail-section-title">🎵 Audio</h2>
+        <h2 className="detail-section-title">Audio</h2>
         <div className="glass-card" style={{ cursor: 'default' }}>
           {note.audio_filename ? (
             <audio
@@ -163,7 +174,7 @@ export default function NoteDetail() {
 
       {/* Transcript */}
       <div className="detail-section">
-        <h2 className="detail-section-title">📄 Transcript</h2>
+        <h2 className="detail-section-title">Transcript</h2>
         {note.transcript ? (
           <div className="transcript-box">{note.transcript}</div>
         ) : (
@@ -180,7 +191,7 @@ export default function NoteDetail() {
       {/* Reminders */}
       <div className="detail-section">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--spacing-md)' }}>
-          <h2 className="detail-section-title" style={{ marginBottom: 0 }}>🔔 Reminders</h2>
+          <h2 className="detail-section-title" style={{ marginBottom: 0 }}>Reminders</h2>
           <button
             className="btn btn-primary btn-sm"
             onClick={() => setShowReminderForm(!showReminderForm)}
@@ -225,7 +236,7 @@ export default function NoteDetail() {
                 disabled={submitting}
                 id="create-reminder-btn"
               >
-                {submitting ? 'Creating...' : '🔔 Create Reminder'}
+                {submitting ? 'Creating...' : 'Create Reminder'}
               </button>
             </form>
           </div>
@@ -244,6 +255,12 @@ export default function NoteDetail() {
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <ReminderBadge reminder={r} />
+                  <button 
+                    className="btn btn-primary btn-sm" 
+                    onClick={() => handleToggleReminder(r.id)}
+                  >
+                    {r.is_triggered ? 'Undo' : 'Done'}
+                  </button>
                   {!r.is_triggered && (
                     <button
                       className="btn btn-danger btn-sm"
@@ -269,7 +286,7 @@ export default function NoteDetail() {
       {/* Actions */}
       <div style={{ marginTop: 'var(--spacing-xl)', textAlign: 'center' }}>
         <button className="btn btn-danger" onClick={handleDeleteNote} id="delete-note-btn">
-          🗑️ Delete Note
+          Delete Note
         </button>
       </div>
 

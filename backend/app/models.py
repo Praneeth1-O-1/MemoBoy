@@ -48,6 +48,11 @@ class Note(db.Model):
     def to_dict(self):
         import os
         audio_filename = os.path.basename(self.audio_path) if self.audio_path else None
+        
+        created_dt = self.created_at
+        if created_dt and created_dt.tzinfo is None:
+            created_dt = created_dt.replace(tzinfo=timezone.utc)
+
         return {
             'id': self.id,
             'title': self.title or f'Voice Note #{self.id}',
@@ -55,7 +60,7 @@ class Note(db.Model):
             'audio_filename': audio_filename,
             'transcript': self.transcript,
             'status': self.status,
-            'created_at': self.created_at.isoformat(),
+            'created_at': created_dt.isoformat() if created_dt else None,
             'user_id': self.user_id,
             'reminders': [r.to_dict() for r in self.reminders]
         }
@@ -73,11 +78,19 @@ class Reminder(db.Model):
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
     def to_dict(self):
+        created_dt = self.created_at
+        if created_dt and created_dt.tzinfo is None:
+            created_dt = created_dt.replace(tzinfo=timezone.utc)
+            
+        remind_dt = self.remind_at
+        if remind_dt and remind_dt.tzinfo is None:
+            remind_dt = remind_dt.replace(tzinfo=timezone.utc)
+
         return {
             'id': self.id,
             'note_id': self.note_id,
-            'remind_at': self.remind_at.isoformat(),
+            'remind_at': remind_dt.isoformat() if remind_dt else None,
             'message': self.message,
             'is_triggered': self.is_triggered,
-            'created_at': self.created_at.isoformat()
+            'created_at': created_dt.isoformat() if created_dt else None
         }

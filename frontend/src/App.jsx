@@ -24,7 +24,7 @@ export default function App() {
             className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
             id="nav-home"
           >
-            📝 Notes
+            Notes
           </NavLink>
         </nav>
 

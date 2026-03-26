@@ -58,9 +58,7 @@ def _rule_based_parser(transcript: str, current_time: datetime) -> dict:
     reminder_time = None
     if "tomorrow" in text:
         from datetime import timedelta
-        reminder_time = ((current_time + timedelta(days=1)).replace(hour=9, minute=0, second=0, microsecond=0)
-                         .astimezone(timezone.utc)
-                         .isoformat())
+        reminder_time = (current_time + timedelta(days=1)).isoformat()
 
     # Extract title (first meaningful part)
     title = transcript[:50].strip()

@@ -51,6 +51,16 @@ export const fetchReminders = async () => {
   return data;
 };
 
+export const createStandaloneReminder = async (remindAt, message) => {
+  const { data } = await api.post('/reminders', { remind_at: remindAt, message });
+  return data;
+};
+
+export const toggleReminderStatus = async (reminderId) => {
+  const { data } = await api.patch(`/reminders/${reminderId}/toggle`);
+  return data;
+};
+
 export const deleteReminder = async (reminderId) => {
   const { data } = await api.delete(`/reminders/${reminderId}`);
   return data;

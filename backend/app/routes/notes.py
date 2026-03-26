@@ -152,7 +152,7 @@ def list_notes():
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 20, type=int)
 
-    pagination = Note.query.order_by(Note.created_at.desc()).paginate(
+    pagination = Note.query.filter(Note.status != 'standalone').order_by(Note.created_at.desc()).paginate(
         page=page,
         per_page=per_page,
         error_out=False

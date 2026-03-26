@@ -1,32 +1,15 @@
 # VoiceNote 🎙️
 
-AI-Powered Voice Notes & Reminders — Record, transcribe, and get smart reminders from your voice.
+**Associate Software Engineer - Bala - Assessment**
 
-## Features
-
-- 🎙️ **Voice Recording** — Record notes directly from your browser
-- 🤖 **AI Transcription** — Whisper API converts speech to text
-- 🧠 **Intent Parsing** — GPT-4o extracts tasks and reminders from transcripts
-- ⏰ **Smart Reminders** — Auto-creates reminders when you say "remind me..."
-- 📋 **Note Management** — List, view, and manage all your voice notes
-
-## Tech Stack
-
-| Layer | Technology |
-|-------|-----------|
-| Backend | Python + Flask |
-| Frontend | React (Vite) |
-| Database | SQLite |
-| Transcription | OpenAI Whisper API |
-| AI Parsing | GPT-4o |
-| Scheduling | APScheduler |
+An AI-powered voice notes and reminders application built to demonstrate clear boundaries, logical organization, correctness, and interface safety. This project focuses on simplicity, maintainability, and change resilience over feature bloat.
 
 ## Quick Start
 
 ### Prerequisites
 - Python 3.10+
 - Node.js 18+
-- OpenAI API key
+- Sarvam AI API key
 
 ### Backend Setup
 
@@ -38,13 +21,12 @@ pip install -r requirements.txt
 
 # Create .env file
 cp .env.example .env
-# Edit .env and add your OPENAI_API_KEY
+# Edit .env and add your SARVAM_API_KEY
 
 # Run the server
 python run.py
 ```
-
-Backend runs at `http://localhost:5000`
+*Backend runs at `http://localhost:5001`*
 
 ### Frontend Setup
 
@@ -53,67 +35,56 @@ cd frontend
 npm install
 npm run dev
 ```
+*Frontend runs at `http://localhost:5174` (or 5173 if available)*
 
-Frontend runs at `http://localhost:5173`
+---
 
-## API Endpoints
+## Technical Decisions & Evaluation Criteria
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/notes/voice` | Upload audio, transcribe, parse intent |
-| GET | `/notes` | List all notes |
-| GET | `/notes/:id` | Get note detail |
-| DELETE | `/notes/:id` | Delete a note |
-| POST | `/notes/:id/remind` | Create manual reminder |
-| GET | `/reminders` | List upcoming reminders |
-| DELETE | `/reminders/:id` | Cancel a reminder |
+### 1. Architecture & Structure (Clear Boundaries)
+The application is structured into two completely decoupled layers:
+- **Frontend (React)**: Handles the presentation layer, built with Vite. It manages state locally and communicates via a dedicated API client module (`api/client.js`), separating network logic from UI components.
+- **Backend (Flask API)**: Built securely with a service-oriented architecture.
+  - **Routes**: Thin controllers that handle only HTTP request parsing and response formatting.
+  - **Services**: Pure business logic (e.g., `transcription.py`, `ai_parser.py`, `scheduler.py`). This allows testing business logic without spinning up the Flask app.
+  - **Models**: Database schemas strictly defining relationships (Note, Reminder).
 
-## Environment Variables
+### 2. Simplicity & Change Resilience
+Code is written to prioritize readability and predictability over cleverness. For example, instead of a complex state machine for transcription, background tasks gracefully update a single status column (`pending_transcription` -> `transcribed` / `failed`). This prevents widespread impact if the transcription service is swapped out. We also use a simple, reliable rule-based parser locally for intent extraction to avoid an extra layer of failure and latency from LLM APIs.
 
-| Variable | Description |
-|----------|-------------|
-| `OPENAI_API_KEY` | Your OpenAI API key (required) |
-| `FLASK_ENV` | `development` or `production` |
-| `SECRET_KEY` | Flask secret key |
-| `DATABASE_URL` | Database connection string |
+### 3. Correctness & Interface Safety
+- **Data Validation**: API endpoints rigorously validate payloads before processing requests. Missing audio or malformed data gets a predictable `400 Bad Request` structure.
+- **Interface Safety**: Forms and API requests use explicit guards. File types are checked server-side, and audio sizes are restricted to prevent memory exhaustion. Dates and times are strictly parsed to ISO formats to prevent invalid database states.
 
-## Running Tests
+### 4. Verification (Automated Tests)
+- Automated tests (`pytest tests/ -v`) verify core business rules. 
+- The `ai_parser` test suite validates that intent recognition correctly structures dates, times, and reminder tasks locally without requiring constant external network calls, proving behavior remains correct as dependencies change.
 
-```bash
-cd backend
-python -m pytest tests/ -v
-```
+### 5. Observability
+Failures are visible and diagnosable. If transcription fails due to an invalid file or service unavailability, the database reflects a `failed` status, the frontend auto-polls it, and gracefully informs the user that their audio could not be parsed. Server logs capture all background worker lifecycle events.
 
-Tests use mocked OpenAI responses — no API key required.
+### 6. AI Usage & Guidance
+- **Guidance & Tooling**: Development was guided by strict constraints (e.g., `claude.md` and AI agent rules) that enforce writing modular, correct code.
+- **Critical Review**: Code generated by AI (especially complex background processing and date loop manipulations) was heavily isolated, critically reviewed, and manually fixed when edge cases were missed.
 
-## Project Structure
+### 7. Tradeoffs and Weaknesses
+- **Tradeoff**: SQLite was chosen for ease of assessment setup instead of PostgreSQL. It works perfectly for small-scale usage, but concurrent background writes required careful connection handling. Migration to Postgres would be required for horizontal scaling.
+- **Weakness**: Currently, UI state updates for background transcriptions rely on synchronous HTTP polling. In a high-traffic production environment, Websockets or Server-Sent Events (SSE) would improve efficiency and provide a better real-time feel. The clear separation of concerns makes this an easy future extension.
 
-```
-voicenote/
-├── backend/
-│   ├── app/
-│   │   ├── __init__.py          # Flask app factory
-│   │   ├── models.py            # DB models (Note, Reminder, User)
-│   │   ├── routes/
-│   │   │   ├── notes.py         # /notes endpoints
-│   │   │   └── reminders.py     # /reminders endpoints
-│   │   ├── services/
-│   │   │   ├── transcription.py # Whisper API
-│   │   │   ├── ai_parser.py     # GPT-4o intent extraction
-│   │   │   └── scheduler.py     # APScheduler jobs
-│   │   └── utils/
-│   │       └── validators.py    # Input validation
-│   ├── tests/
-│   ├── config.py
-│   ├── requirements.txt
-│   └── run.py
-├── frontend/
-│   ├── src/
-│   │   ├── components/          # RecordButton, NoteCard, ReminderBadge
-│   │   ├── pages/               # Home, NoteDetail
-│   │   ├── api/client.js        # Axios API client
-│   │   └── App.jsx
-│   └── package.json
-├── claude.md
-└── README.md
-```
+---
+
+## Stack & Libraries
+
+| Layer | Technology |
+|-------|-----------|
+| **Backend** | Python, Flask, SQLAlchemy, APScheduler |
+| **Frontend** | React (Vite), React Router |
+| **Database** | SQLite (Relational DB) |
+| **Transcription** | Sarvam AI SDK for audio-to-text |
+| **AI Parsing** | Local Rule-Based NLP Pipeline |
+
+## What to Submit Reference
+- **Repository**: This project.
+- **README**: Detailed above, covering technical decisions.
+- **Walkthrough**: Please refer to the submitted video detailing architecture, structure, risks, and the extension approach.
+- **AI Guidance Files**: Found in the repository files guiding the AI (e.g., `claude.md`).
